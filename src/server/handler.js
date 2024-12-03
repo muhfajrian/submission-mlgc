@@ -1,6 +1,6 @@
 const predictClassification = require('../services/inferenceService');
 const crypto = require('crypto');
-const storeData = require('../services/storeData');
+const { storeData, getData } = require('../services/storeData');
 
 async function postPredictHandler(request, h) {
   const { image } = request.payload;
@@ -28,4 +28,33 @@ async function postPredictHandler(request, h) {
   return response;
 }
 
-module.exports = postPredictHandler;
+async function getPredictHandler(request, h) {
+  const snapshot = await getData();
+
+  if (snapshot.empty) {
+    return h.response({ message: 'No documents found' }).code(404);
+  }
+
+  const documents = snapshot.docs.map(doc => {
+    const data = doc.data();
+
+    return {
+      id: doc.id,
+      history: {
+        result: data.result,
+        createdAt: data.createdAt,
+        suggestion: data.suggestion,
+        id: doc.id,
+      }
+    };
+  });
+
+  const response = h.response({
+    status: 'success',
+    data: documents
+  })
+  response.code(200);
+  return response;
+}
+
+module.exports = { postPredictHandler, getPredictHandler };
